@@ -2574,7 +2574,16 @@ void run_sweep(Ini* ini, const char* exe_path) {
         const char* dist = dict_get_str(dict, "distribution");
         SpaceType type = SPACE_LINEAR;
         int is_integer = 0;
-        if (strcmp(dist, "uniform") == 0) {
+        // A child ini can override a key but has no way to delete an inherited
+        // [sweep.<section>.<key>] section, so an env whose axes differ from
+        // default.ini's cannot express that. distribution = off drops the axis:
+        // it leaves params[n_params] as scratch and never increments n_params.
+        // Pinning min == max is not a substitute -- space_normalize divides by
+        // space_fwd(max) - space_fwd(min), so a pinned axis yields NaN and
+        // trial 0's range assert fires.
+        if (strcmp(dist, "off") == 0) {
+            continue;
+        } else if (strcmp(dist, "uniform") == 0) {
             type = SPACE_LINEAR;
         } else if (strcmp(dist, "int_uniform") == 0) {
             type = SPACE_LINEAR;
@@ -2587,7 +2596,7 @@ void run_sweep(Ini* ini, const char* exe_path) {
         } else if (strcmp(dist, "logit_normal") == 0) {
             type = SPACE_LOGIT;
         } else {
-            assert(0 && "invalid sweep distribution (use uniform/int_uniform/"
+            assert(0 && "invalid sweep distribution (use off/uniform/int_uniform/"
                 "uniform_pow2/log_normal/logit_normal)");
         }
 
